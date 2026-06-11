@@ -20,6 +20,26 @@ import { fileURLToPath } from "node:url";
 import { dirname } from "node:path";
 import matter from "gray-matter";
 import { marked } from "marked";
+import sanitizeHtml from "sanitize-html";
+
+// Posts may be AI-generated, so treat their Markdown as untrusted: render to
+// HTML, then strip anything that could execute (scripts, event handlers,
+// javascript: URLs) while keeping the tags a blog post legitimately uses.
+const SANITIZE_OPTS = {
+  allowedTags: sanitizeHtml.defaults.allowedTags.concat(["img", "h1", "h2"]),
+  allowedAttributes: {
+    ...sanitizeHtml.defaults.allowedAttributes,
+    a: ["href", "name", "target", "rel"],
+    img: ["src", "alt", "title"],
+    code: ["class"], // language-* hints from fenced blocks
+    span: ["class"],
+  },
+  allowedSchemes: ["http", "https", "mailto"],
+};
+
+function renderMarkdown(md) {
+  return sanitizeHtml(marked.parse(md), SANITIZE_OPTS);
+}
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const POSTS_DIR = join(ROOT, "posts");
@@ -129,7 +149,7 @@ function renderPost(post) {
   const body = `<article>
 <h1>${escapeHtml(post.title)}</h1>
 <div class="post-meta">${formatDate(post.date)} ${tags}</div>
-${marked.parse(post.content)}
+${renderMarkdown(post.content)}
 <a class="back" href="/">← 返回首页</a>
 </article>`;
   return layout({ title: `${post.title} · ${SITE.title}`, body });
