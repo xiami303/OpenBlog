@@ -1,0 +1,62 @@
+name: Generate & Publish
+
+# Builds the static site from posts/ and publishes it to GitHub Pages.
+#
+# Triggers:
+#   - daily on a schedule (so AI-generated posts go live automatically)
+#   - on push to main (the production branch)
+#   - manually via the Actions tab
+#
+# Note: develop is the integration branch; publishing happens from main.
+# Merge develop -> main to release.
+
+on:
+  schedule:
+    # 23:17 UTC daily (~07:17 Asia/Shanghai). Off the :00 mark on purpose.
+    - cron: "17 23 * * *"
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Allow only one concurrent deployment.
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build site
+        run: npm run build
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: public
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

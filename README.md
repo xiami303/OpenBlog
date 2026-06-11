@@ -60,17 +60,16 @@ OpenBlog 用 AI Agent 把这条链路自动化:
 
 ## 项目状态
 
-> ⚠️ **早期阶段(Scaffold)**
+> 🚧 **早期可用(Early / MVP)**
 >
-> 当前仓库处于初始搭建阶段,尚未包含完整的应用代码与生成/发布流水线。
-> 上面描述的是项目的**目标定位与设计蓝图**,功能正在逐步落地。
+> 已具备一条可运行的静态站点流水线:`posts/` 里的 Markdown 文章会被生成器渲染成站点,并由 CI 定时构建、自动发布到 GitHub Pages。AI 自动撰写文章的环节正在逐步接入。
 
 ### 路线图(Roadmap)
 
+- [x] 静态站点生成器(Markdown → HTML)
+- [x] 自动构建与发布(GitHub Pages,定时 + 触发)
 - [ ] 记忆采集与结构化存储
-- [ ] AI 文章生成流水线
-- [ ] 自动构建与发布
-- [ ] 定时 / 触发式自动运行
+- [ ] AI 文章生成流水线(由记忆自动撰写)
 - [ ] 站点主题与个人化配置
 
 ## 快速开始
@@ -78,9 +77,42 @@ OpenBlog 用 AI Agent 把这条链路自动化:
 ```bash
 git clone https://github.com/xiami303/OpenBlog.git
 cd OpenBlog
+npm install        # 安装依赖
+npm run build      # 渲染 posts/ → public/
+npm run serve      # 构建并本地预览 http://localhost:8080
 ```
 
-> 构建与运行命令将随功能落地补充。当前仓库尚无构建工具链 —— 详见 [AGENTS.md](AGENTS.md)。
+### 写一篇文章
+
+在 `posts/` 下新建一个 `.md` 文件(文件名即文章 URL slug),开头写好 front matter:
+
+```markdown
+---
+title: 我的想法
+date: 2026-06-11
+tags: [memory, ai]
+summary: 显示在首页的一句话简介。
+---
+
+# 我的想法
+...
+```
+
+所有字段都可省略 —— 没有 title 就用第一个标题或文件名,没有 date 就用文件修改时间。运行 `npm run build` 后,文章就会出现在站点上。
+
+## 目录结构
+
+```
+posts/                # Markdown 文章(内容源)
+scripts/build.mjs     # 静态站点生成器
+public/               # 构建产物(自动生成,已 gitignore)
+.github/workflows/    # 定时生成 + 自动发布到 Pages
+```
+
+## 分支规则
+
+- **`develop`** —— 集成分支,**日常开发与提交的默认分支**。
+- **`main`** —— 生产 / 已发布分支,CI 从这里部署到 Pages。仅在发布时把 `develop` 合并到 `main`。
 
 ## 参与开发
 
