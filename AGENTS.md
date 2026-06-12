@@ -18,15 +18,21 @@ Pages by CI.
 .
 ├── AGENTS.md                  # this file
 ├── README.md                  # positioning + usage
-├── package.json               # scripts: build, serve
-├── posts/                     # Markdown articles (the content source)
+├── package.json               # scripts: build, serve, generate
+├── memory/                    # daily raw thoughts (input for AI generation)
+│   └── *.md                   # one note per thought; front matter: date, tags
+├── posts/                     # Markdown articles (the site content source)
 │   └── *.md                   # front matter: title, date, tags, summary
 ├── scripts/
-│   └── build.mjs              # static-site generator (Markdown -> public/)
+│   ├── build.mjs              # static-site generator (Markdown -> public/)
+│   ├── serve.mjs              # local preview server
+│   ├── generate.mjs           # AI article generator (memory/ -> posts/)
+│   └── providers/             # pluggable AI providers (anthropic/openai/dryrun)
 ├── public/                    # build output (git-ignored, regenerated)
 └── .github/
     └── workflows/
-        └── publish.yml        # scheduled generate + publish to Pages
+        ├── publish.yml        # scheduled build + publish to Pages (from main)
+        └── generate.yml       # scheduled AI generate -> PR to develop
 ```
 
 ## Branch policy — IMPORTANT
@@ -47,6 +53,7 @@ Toolchain: Node.js (ESM), deps `marked` + `gray-matter`.
 npm ci          # install (CI) — or npm install locally
 npm run build   # render posts/ -> public/
 npm run serve   # build, then serve public/ at http://localhost:8080
+npm run generate -- --provider dryrun   # memory/ -> a new posts/*.md (no API key needed)
 ```
 
 Validation for a change: `npm run build` succeeds and produces
@@ -71,6 +78,17 @@ summary: One-line teaser shown on the index.
 
 All fields are optional — missing title falls back to the first heading or the
 filename; missing date falls back to file mtime.
+
+## AI generation (memory/ -> posts/)
+
+`scripts/generate.mjs` reads recent notes from `memory/`, asks the selected AI
+provider to distill them into one article, and writes it to `posts/`. Provider
+selection (`scripts/providers/index.mjs`): `OPENBLOG_PROVIDER` override, else
+`ANTHROPIC_API_KEY` -> anthropic, else `OPENAI_API_KEY` -> openai, else
+**dryrun** (a zero-dependency, no-network stub so the pipeline always runs). The
+SDKs are `optionalDependencies` — install only when wiring a real key. The
+`generate.yml` workflow runs this and opens a PR to `develop` for review; it
+never publishes directly.
 
 ## Conventions
 

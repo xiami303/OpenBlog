@@ -68,8 +68,8 @@ OpenBlog 用 AI Agent 把这条链路自动化:
 
 - [x] 静态站点生成器(Markdown → HTML)
 - [x] 自动构建与发布(GitHub Pages,定时 + 触发)
-- [ ] 记忆采集与结构化存储
-- [ ] AI 文章生成流水线(由记忆自动撰写)
+- [x] AI 文章生成流水线(由记忆自动撰写,provider 可插拔)
+- [ ] 记忆采集与结构化存储(目前为手动写入 `memory/`)
 - [ ] 站点主题与个人化配置
 
 ## 快速开始
@@ -100,13 +100,38 @@ summary: 显示在首页的一句话简介。
 
 所有字段都可省略 —— 没有 title 就用第一个标题或文件名,没有 date 就用文件修改时间。运行 `npm run build` 后,文章就会出现在站点上。
 
+## 让 AI 由记忆自动写文章
+
+把每天零散的所思所想写进 `memory/`(一篇 `.md` 一段想法),然后让 AI 把它们沉淀成一篇博客:
+
+```bash
+npm run generate                      # 读取近 7 天的 memory/ → 生成一篇文章到 posts/
+npm run generate -- --days 3 --max 5  # 只看最近 3 天、最多 5 条记忆
+npm run generate -- --provider dryrun # 强制用占位生成器(不调用 AI)
+```
+
+**Provider 可插拔,模型待定 —— 无需 key 也能跑:**
+
+| 条件 | 使用的 provider |
+| --- | --- |
+| 设了 `ANTHROPIC_API_KEY` | `anthropic`(Claude,默认 `claude-opus-4-8`) |
+| 设了 `OPENAI_API_KEY` | `openai` |
+| 都没设 | `dryrun`(占位生成器,把记忆整理成文章骨架,**零依赖、不联网**) |
+
+> 想接真实模型:设好对应的环境变量,再 `npm install @anthropic-ai/sdk`(或 `openai`)即可。可用 `OPENBLOG_PROVIDER` / `OPENBLOG_MODEL` 覆盖默认选择。
+
+CI 里的 **AI Generate Post** 工作流会每日定时(或手动触发)运行生成器,并把结果**开成一个针对 `develop` 的 PR 供你审阅**;审阅合并后再走 `develop → main` 发布。API key 通过仓库 Secrets(`ANTHROPIC_API_KEY` / `OPENAI_API_KEY`)注入;没配也会用 dryrun 开 PR。
+
 ## 目录结构
 
 ```
-posts/                # Markdown 文章(内容源)
-scripts/build.mjs     # 静态站点生成器
+memory/               # 每日零散想法(AI 生成的输入源)
+posts/                # Markdown 文章(站点内容)
+scripts/build.mjs     # 静态站点生成器(Markdown → public/)
+scripts/generate.mjs  # AI 文章生成器(memory/ → posts/)
+scripts/providers/    # 可插拔的 AI provider(anthropic / openai / dryrun)
 public/               # 构建产物(自动生成,已 gitignore)
-.github/workflows/    # 定时生成 + 自动发布到 Pages
+.github/workflows/    # 定时生成开 PR + 自动发布到 Pages
 ```
 
 ## 分支规则
